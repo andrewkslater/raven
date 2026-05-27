@@ -312,6 +312,50 @@ let synth = window.speechSynthesis;
 let db = null;
 let userId = localStorage.getItem('raven_uid') || 'default_user';
 
+// ── COSTS ──
+const COSTS = {
+  inputPerToken: 0.000003,   // $3 per 1M input tokens (Sonnet)
+  outputPerToken: 0.000015,  // $15 per 1M output tokens (Sonnet)
+  searchPerUse: 0.01,        // $10 per 1000 searches
+  gbpRate: 0.79              // USD to GBP approx
+};
+
+async function trackUsage(inputTokens, outputTokens, searches) {
+  const inputCost = inputTokens * COSTS.inputPerToken;
+  const outputCost = outputTokens * COSTS.outputPerToken;
+  const searchCost = searches * COSTS.searchPerUse;
+  const totalUSD = inputCost + outputCost + searchCost;
+  const totalGBP = totalUSD * COSTS.gbpRate;
+  const today = new Date().toISOString().split('T')[0];
+  if (!db) return;
+  try {
+    await db.collection('raven_usage').add({
+      userId, inputTokens, outputTokens, searches,
+      totalUSD, totalGBP, date: today,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e) { console.error('Track usage error:', e); }
+}
+
+async function getUsageSummary(days) {
+  if (!db) return null;
+  try {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    const sinceStr = since.toISOString().split('T')[0];
+    const snap = await db.collection('raven_usage')
+      .where('userId','==',userId)
+      .get();
+    const docs = snap.docs
+      .map(d => d.data())
+      .filter(d => d.date >= sinceStr);
+    const totalGBP = docs.reduce((s,d) => s + (d.totalGBP||0), 0);
+    const totalSearches = docs.reduce((s,d) => s + (d.searches||0), 0);
+    const totalTokens = docs.reduce((s,d) => s + (d.inputTokens||0) + (d.outputTokens||0), 0);
+    return { totalGBP: totalGBP.toFixed(4), totalSearches, totalTokens, days };
+  } catch(e) { return null; }
+}
+
 // ── FIREBASE ──
 function initFirebase() {
   const key = localStorage.getItem('raven_fb_key');
@@ -544,7 +588,7 @@ function getVoice() {
 }
 
 // ── SYSTEM PROMPT ──
-function buildSystemPrompt() {
+async function buildSystemPrompt() {
   const name = userName ? `The user's name is ${userName}.` : '';
   const memoryBlock = memories.length
     ? `\nFACTS YOU KNOW ABOUT THE USER:\n${memories.map(m => `- ${m.text}`).join('\n')}`
@@ -624,17 +668,23 @@ async function sendToRaven(text, silent = false) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 500,
-        system: buildSystemPrompt(),
-        messages
+        max_tokens: 1000,
+        system: await buildSystemPrompt(),
+        messages,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }]
       })
     });
 
     const data = await res.json();
     if (data.error) throw new Error(data.error.message);
 
-    let reply = data.content[0].text;
+    const textBlock = data.content.find(b => b.type === 'text');
+    let reply = textBlock ? textBlock.text : 'Sorry, I could not generate a response.';
     removeTypingIndicator();
+
+    // Track usage costs
+    const searches = data.content.filter(b => b.type === 'tool_use').length;
+    if (data.usage) trackUsage(data.usage.input_tokens||0, data.usage.output_tokens||0, searches);
 
     // ── PARSE MEMORY TAG ──
     const memMatch = reply.match(/\[MEMORY:\s*(.+?)\]/);
