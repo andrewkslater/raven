@@ -247,6 +247,10 @@
   <div class="panel" id="panel-calendar">
     <div class="panel-title">📅 CALENDAR</div>
     <button class="connect-btn" id="cal-connect-btn" onclick="connectCalendar()">🔗 CONNECT GOOGLE CALENDAR</button>
+    <div id="cal-action-btns" style="display:none;gap:8px;margin-bottom:12px;flex-direction:column">
+      <button class="connect-btn" id="cal-create-btn" onclick="createRavenCalendar()" style="margin-bottom:0">✨ CREATE RAVEN CALENDAR</button>
+      <a id="cal-open-link" href="https://calendar.google.com" target="_blank" style="display:block;text-align:center;padding:10px;background:rgba(74,158,255,0.08);border:1px solid rgba(74,158,255,0.2);border-radius:6px;color:var(--accent);font-family:Share Tech Mono,monospace;font-size:10px;letter-spacing:2px;text-decoration:none">🌐 OPEN GOOGLE CALENDAR</a>
+    </div>
     <div id="calendar-list"><div class="empty-state">Connect your Google Calendar<br>to see upcoming events here.</div></div>
   </div>
 
@@ -944,6 +948,7 @@ function autoResize(el) {
 // ── GOOGLE CALENDAR ──
 let tokenClient = null;
 let calendarEvents = [];
+let ravenCalendarId = localStorage.getItem('raven_cal_id') || 'primary';
 
 function initGoogleCalendar() {
   const clientId = localStorage.getItem('raven_google_client_id');
@@ -961,17 +966,52 @@ function initGoogleCalendar() {
         localStorage.setItem('raven_google_token_exp', Date.now() + 3500000);
         document.getElementById('cal-connect-btn').textContent = '✅ GOOGLE CALENDAR CONNECTED';
         document.getElementById('cal-connect-btn').classList.add('connected');
+        document.getElementById('cal-action-btns').style.display = 'flex';
+        // Update create button if RAVEN calendar already exists
+        if (localStorage.getItem('raven_cal_id')) {
+          document.getElementById('cal-create-btn').textContent = '✅ RAVEN CALENDAR EXISTS';
+          document.getElementById('cal-create-btn').classList.add('connected');
+        }
         await loadCalendarEvents();
       }
     }
   });
-  // Try silent token refresh
   const token = getGoogleToken();
   if (token) {
     document.getElementById('cal-connect-btn').textContent = '✅ GOOGLE CALENDAR CONNECTED';
     document.getElementById('cal-connect-btn').classList.add('connected');
+    document.getElementById('cal-action-btns').style.display = 'flex';
+    if (localStorage.getItem('raven_cal_id')) {
+      document.getElementById('cal-create-btn').textContent = '✅ RAVEN CALENDAR EXISTS';
+      document.getElementById('cal-create-btn').classList.add('connected');
+    }
     loadCalendarEvents();
   }
+}
+
+async function createRavenCalendar() {
+  const token = getGoogleToken();
+  if (!token) { connectCalendar(); return; }
+  try {
+    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        summary: 'RAVEN',
+        description: 'Events managed by RAVEN AI assistant',
+        timeZone: 'Europe/London'
+      })
+    });
+    const data = await res.json();
+    if (data.id) {
+      ravenCalendarId = data.id;
+      localStorage.setItem('raven_cal_id', data.id);
+      document.getElementById('cal-create-btn').textContent = '✅ RAVEN CALENDAR CREATED';
+      document.getElementById('cal-create-btn').classList.add('connected');
+      addMessage('raven', 'RAVEN calendar created successfully. It will now appear in your Google Calendar app. All events I add will go into this calendar.', 'calendar', '📅 RAVEN Calendar created');
+      await loadCalendarEvents();
+    }
+  } catch(e) { console.error('Create calendar error:', e); }
 }
 
 function connectCalendar() {
@@ -995,9 +1035,10 @@ async function loadCalendarEvents() {
   if (!token) return;
   try {
     const now = new Date().toISOString();
-    const end = new Date(Date.now() + 7 * 86400000).toISOString();
+    const end = new Date(Date.now() + 14 * 86400000).toISOString();
+    const calId = encodeURIComponent(ravenCalendarId);
     const res = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${now}&timeMax=${end}&orderBy=startTime&singleEvents=true&maxResults=20`,
+      `https://www.googleapis.com/calendar/v3/calendars/${calId}/events?timeMin=${now}&timeMax=${end}&orderBy=startTime&singleEvents=true&maxResults=30`,
       { headers: { 'Authorization': `Bearer ${token}` } }
     );
     const data = await res.json();
@@ -1012,7 +1053,8 @@ async function createCalendarEvent(title, datetimeStr, durationMins = 60, descri
   try {
     const start = new Date(datetimeStr);
     const end = new Date(start.getTime() + durationMins * 60000);
-    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    const calId = encodeURIComponent(ravenCalendarId);
+    const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${calId}/events`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
