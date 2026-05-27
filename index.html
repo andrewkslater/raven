@@ -588,6 +588,10 @@ async function sendToRaven(text, silent = false) {
     conversationHistory.push({ role: 'user', content: text });
   }
 
+  // Reload memories fresh from Firestore before every message
+  await loadMemories();
+  await loadTodayFood();
+
   setOrbState('thinking');
   addTypingIndicator();
 
