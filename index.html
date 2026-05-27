@@ -5,622 +5,190 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>RAVEN</title>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
-      --bg: #05070d;
-      --panel: #0b0f1a;
-      --border: #1a2540;
-      --accent: #4a9eff;
-      --accent2: #8b5cf6;
-      --glow: rgba(74, 158, 255, 0.15);
-      --text: #c8d8f0;
-      --muted: #4a6080;
-      --danger: #ff4a6e;
-      --success: #4affb4;
-      --warn: #ffb84a;
+      --bg: #05070d; --panel: #0b0f1a; --border: #1a2540;
+      --accent: #4a9eff; --accent2: #8b5cf6; --glow: rgba(74,158,255,0.15);
+      --text: #c8d8f0; --muted: #4a6080; --danger: #ff4a6e;
+      --success: #4affb4; --warn: #ffb84a;
     }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Rajdhani', sans-serif; overflow: hidden; }
+    body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(74,158,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(74,158,255,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
+    body::after { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(74,158,255,0.06) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+    #app { position: relative; z-index: 1; height: 100vh; display: flex; flex-direction: column; }
 
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Rajdhani', sans-serif;
-      overflow: hidden;
-    }
-
-    /* Animated background grid */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(74,158,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(74,158,255,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    body::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(74,158,255,0.06) 0%, transparent 70%);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    #app {
-      position: relative;
-      z-index: 1;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* ── HEADER ── */
-    header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 16px 20px 12px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(11,15,26,0.8);
-      backdrop-filter: blur(10px);
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .logo-icon {
-      width: 32px;
-      height: 32px;
-      position: relative;
-    }
-
-    .logo-icon svg {
-      width: 100%;
-      height: 100%;
-      filter: drop-shadow(0 0 6px var(--accent));
-    }
-
-    .logo-text {
-      font-size: 22px;
-      font-weight: 700;
-      letter-spacing: 6px;
-      color: #fff;
-      text-shadow: 0 0 20px var(--accent);
-    }
-
-    .logo-sub {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 8px;
-      color: var(--muted);
-      letter-spacing: 2px;
-      margin-top: -4px;
-    }
-
-    .header-status {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      color: var(--muted);
-      letter-spacing: 1px;
-    }
-
-    .status-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--success);
-      box-shadow: 0 0 6px var(--success);
-      animation: pulse 2s infinite;
-    }
-
-    .status-dot.offline { background: var(--danger); box-shadow: 0 0 6px var(--danger); animation: none; }
+    /* HEADER */
+    header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 10px; border-bottom: 1px solid var(--border); background: rgba(11,15,26,0.9); backdrop-filter: blur(10px); flex-shrink: 0; }
+    .logo { display: flex; align-items: center; gap: 8px; }
+    .logo-icon svg { width: 28px; height: 28px; filter: drop-shadow(0 0 6px var(--accent)); }
+    .logo-text { font-size: 20px; font-weight: 700; letter-spacing: 5px; color: #fff; text-shadow: 0 0 20px var(--accent); }
+    .logo-sub { font-family: 'Share Tech Mono', monospace; font-size: 7px; color: var(--muted); letter-spacing: 2px; margin-top: -3px; }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .status-pill { display: flex; align-items: center; gap: 5px; font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 1px; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px var(--success); animation: pulse 2s infinite; }
     .status-dot.thinking { background: var(--warn); box-shadow: 0 0 6px var(--warn); animation: fastpulse 0.5s infinite; }
+    .status-dot.offline { background: var(--danger); animation: none; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+    @keyframes fastpulse { 0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(1.3)} }
+    .icon-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 5px 9px; border-radius: 4px; cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 1px; transition: all 0.2s; }
+    .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
+    /* PANELS */
+    .panel { flex: 1; overflow: hidden; display: none; flex-direction: column; }
+    .panel.active { display: flex; }
 
-    @keyframes fastpulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.6; transform: scale(1.3); }
-    }
-
-    .settings-btn {
-      background: none;
-      border: 1px solid var(--border);
-      color: var(--muted);
-      padding: 6px 10px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 1px;
-      transition: all 0.2s;
-    }
-
-    .settings-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* ── CHAT ── */
-    #chat {
-      flex: 1;
-      overflow-y: auto;
-      padding: 20px 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      scroll-behavior: smooth;
-    }
-
+    /* CHAT PANEL */
+    #chat { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth; }
     #chat::-webkit-scrollbar { width: 3px; }
-    #chat::-webkit-scrollbar-track { background: transparent; }
     #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-    .msg {
-      display: flex;
-      flex-direction: column;
-      max-width: 88%;
-      animation: msgIn 0.3s ease forwards;
-      opacity: 0;
-      transform: translateY(8px);
-    }
-
-    @keyframes msgIn {
-      to { opacity: 1; transform: translateY(0); }
-    }
-
+    .msg { display: flex; flex-direction: column; max-width: 88%; animation: msgIn 0.3s ease forwards; opacity: 0; transform: translateY(8px); }
+    @keyframes msgIn { to { opacity:1; transform:translateY(0); } }
     .msg.user { align-self: flex-end; align-items: flex-end; }
     .msg.raven { align-self: flex-start; align-items: flex-start; }
-
-    .msg-label {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 9px;
-      letter-spacing: 2px;
-      color: var(--muted);
-      margin-bottom: 4px;
-    }
-
+    .msg-label { font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--muted); margin-bottom: 3px; }
     .msg.raven .msg-label { color: var(--accent); }
-
-    .msg-bubble {
-      padding: 10px 14px;
-      border-radius: 2px;
-      font-size: 15px;
-      line-height: 1.5;
-      font-weight: 400;
-    }
-
-    .msg.user .msg-bubble {
-      background: rgba(74,158,255,0.1);
-      border: 1px solid rgba(74,158,255,0.25);
-      border-radius: 8px 2px 8px 8px;
-      color: #e8f0ff;
-    }
-
-    .msg.raven .msg-bubble {
-      background: rgba(11,15,26,0.9);
-      border: 1px solid var(--border);
-      border-left: 2px solid var(--accent);
-      border-radius: 2px 8px 8px 8px;
-      color: var(--text);
-    }
-
-    /* Typing indicator */
-    .typing-indicator {
-      display: flex;
-      gap: 4px;
-      padding: 12px 16px;
-      align-items: center;
-    }
-
-    .typing-dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: var(--accent);
-      animation: typing 1.2s infinite;
-    }
-
+    .msg-bubble { padding: 9px 13px; font-size: 15px; line-height: 1.5; }
+    .msg.user .msg-bubble { background: rgba(74,158,255,0.1); border: 1px solid rgba(74,158,255,0.25); border-radius: 8px 2px 8px 8px; color: #e8f0ff; }
+    .msg.raven .msg-bubble { background: rgba(11,15,26,0.9); border: 1px solid var(--border); border-left: 2px solid var(--accent); border-radius: 2px 8px 8px 8px; color: var(--text); }
+    .food-tag { display: inline-block; margin-top: 6px; padding: 4px 8px; background: rgba(74,255,180,0.08); border: 1px solid rgba(74,255,180,0.2); border-radius: 3px; font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--success); }
+    .memory-tag { display: inline-block; margin-top: 6px; padding: 4px 8px; background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.2); border-radius: 3px; font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--accent2); }
+    .typing-indicator { display: flex; gap: 4px; padding: 10px 14px; align-items: center; }
+    .typing-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); animation: typing 1.2s infinite; }
     .typing-dot:nth-child(2) { animation-delay: 0.2s; }
     .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing { 0%,60%,100%{transform:translateY(0);opacity:0.4}30%{transform:translateY(-6px);opacity:1} }
 
-    @keyframes typing {
-      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-      30% { transform: translateY(-6px); opacity: 1; }
-    }
+    /* ORB */
+    .orb-section { display: flex; flex-direction: column; align-items: center; padding: 10px 0 6px; gap: 6px; flex-shrink: 0; }
+    .orb-wrapper { position: relative; width: 88px; height: 88px; }
+    .orb-ring { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(74,158,255,0.2); animation: ringRotate 8s linear infinite; }
+    .orb-ring:nth-child(2) { inset: 5px; border-color: rgba(139,92,246,0.15); animation-direction: reverse; animation-duration: 12s; }
+    @keyframes ringRotate { to { transform: rotate(360deg); } }
+    .orb { position: absolute; inset: 12px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, rgba(74,158,255,0.3), rgba(11,15,26,0.95)); border: 1px solid rgba(74,158,255,0.3); cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(74,158,255,0.1), inset 0 0 20px rgba(74,158,255,0.05); }
+    .orb.listening { background: radial-gradient(circle at 35% 35%, rgba(74,255,180,0.4), rgba(11,15,26,0.95)); border-color: var(--success); box-shadow: 0 0 40px rgba(74,255,180,0.25); animation: orbPulse 1s ease infinite; }
+    .orb.speaking { background: radial-gradient(circle at 35% 35%, rgba(139,92,246,0.4), rgba(11,15,26,0.95)); border-color: var(--accent2); box-shadow: 0 0 40px rgba(139,92,246,0.25); animation: orbSpeak 0.6s ease infinite alternate; }
+    .orb.thinking { animation: orbThink 1.5s ease infinite; }
+    @keyframes orbPulse { 0%,100%{transform:scale(1)}50%{transform:scale(1.05)} }
+    @keyframes orbSpeak { from{transform:scale(1)}to{transform:scale(1.08)} }
+    @keyframes orbThink { 0%,100%{border-color:rgba(255,184,74,0.3)}50%{border-color:rgba(255,184,74,0.7)} }
+    .orb-icon { font-size: 20px; user-select: none; }
+    .orb-state-text { font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--muted); }
 
-    /* ── ORB VISUALIZER ── */
-    .orb-section {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 12px 0 8px;
-      gap: 8px;
-    }
-
-    .orb-wrapper {
-      position: relative;
-      width: 100px;
-      height: 100px;
-    }
-
-    .orb-ring {
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      border: 1px solid rgba(74,158,255,0.2);
-      animation: ringRotate 8s linear infinite;
-    }
-
-    .orb-ring:nth-child(2) {
-      inset: 6px;
-      border-color: rgba(139,92,246,0.15);
-      animation-direction: reverse;
-      animation-duration: 12s;
-    }
-
-    @keyframes ringRotate {
-      to { transform: rotate(360deg); }
-    }
-
-    .orb {
-      position: absolute;
-      inset: 14px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 35% 35%, rgba(74,158,255,0.3), rgba(11,15,26,0.95));
-      border: 1px solid rgba(74,158,255,0.3);
-      cursor: pointer;
-      transition: all 0.3s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow:
-        0 0 20px rgba(74,158,255,0.1),
-        inset 0 0 20px rgba(74,158,255,0.05);
-    }
-
-    .orb:hover {
-      box-shadow: 0 0 30px rgba(74,158,255,0.2), inset 0 0 20px rgba(74,158,255,0.1);
-    }
-
-    .orb.listening {
-      background: radial-gradient(circle at 35% 35%, rgba(74,255,180,0.4), rgba(11,15,26,0.95));
-      border-color: var(--success);
-      box-shadow: 0 0 40px rgba(74,255,180,0.25), inset 0 0 20px rgba(74,255,180,0.1);
-      animation: orbPulse 1s ease infinite;
-    }
-
-    .orb.speaking {
-      background: radial-gradient(circle at 35% 35%, rgba(139,92,246,0.4), rgba(11,15,26,0.95));
-      border-color: var(--accent2);
-      box-shadow: 0 0 40px rgba(139,92,246,0.25), inset 0 0 20px rgba(139,92,246,0.1);
-      animation: orbSpeak 0.6s ease infinite alternate;
-    }
-
-    .orb.thinking {
-      animation: orbThink 1.5s ease infinite;
-    }
-
-    @keyframes orbPulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-
-    @keyframes orbSpeak {
-      from { transform: scale(1); }
-      to { transform: scale(1.08); }
-    }
-
-    @keyframes orbThink {
-      0%, 100% { box-shadow: 0 0 20px rgba(255,184,74,0.1); border-color: rgba(255,184,74,0.3); }
-      50% { box-shadow: 0 0 40px rgba(255,184,74,0.3); border-color: rgba(255,184,74,0.6); }
-    }
-
-    .orb-icon {
-      font-size: 22px;
-      user-select: none;
-    }
-
-    .orb-state-text {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 2px;
-      color: var(--muted);
-      text-transform: uppercase;
-    }
-
-    /* ── INPUT BAR ── */
-    .input-bar {
-      padding: 12px 16px 20px;
-      background: rgba(11,15,26,0.95);
-      border-top: 1px solid var(--border);
-      display: flex;
-      gap: 10px;
-      align-items: flex-end;
-    }
-
-    #text-input {
-      flex: 1;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 10px 14px;
-      color: var(--text);
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 15px;
-      resize: none;
-      outline: none;
-      min-height: 42px;
-      max-height: 100px;
-      transition: border-color 0.2s;
-    }
-
+    /* INPUT BAR */
+    .input-bar { padding: 10px 14px 8px; background: rgba(11,15,26,0.95); border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; }
+    #text-input { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 6px; padding: 9px 12px; color: var(--text); font-family: 'Rajdhani', sans-serif; font-size: 15px; resize: none; outline: none; min-height: 40px; max-height: 90px; transition: border-color 0.2s; }
     #text-input:focus { border-color: rgba(74,158,255,0.4); }
     #text-input::placeholder { color: var(--muted); }
+    .action-btn { width: 40px; height: 40px; border-radius: 6px; border: 1px solid var(--border); background: rgba(255,255,255,0.04); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px; transition: all 0.2s; flex-shrink: 0; }
+    .action-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .action-btn.mic-active { background: rgba(74,255,180,0.1); border-color: var(--success); color: var(--success); animation: micPulse 1s infinite; }
+    @keyframes micPulse { 0%,100%{box-shadow:0 0 0 0 rgba(74,255,180,0.3)}50%{box-shadow:0 0 0 5px rgba(74,255,180,0)} }
 
-    .send-btn, .mic-btn {
-      width: 42px;
-      height: 42px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.04);
-      color: var(--muted);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 16px;
-      transition: all 0.2s;
-      flex-shrink: 0;
-    }
+    /* BOTTOM NAV */
+    .bottom-nav { display: flex; border-top: 1px solid var(--border); background: rgba(11,15,26,0.98); flex-shrink: 0; }
+    .nav-btn { flex: 1; padding: 10px 4px 12px; background: none; border: none; color: var(--muted); cursor: pointer; font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 1px; display: flex; flex-direction: column; align-items: center; gap: 3px; transition: color 0.2s; }
+    .nav-btn .nav-icon { font-size: 16px; }
+    .nav-btn.active { color: var(--accent); }
+    .nav-btn.active .nav-icon { filter: drop-shadow(0 0 4px var(--accent)); }
 
-    .send-btn:hover { border-color: var(--accent); color: var(--accent); }
+    /* MEMORY PANEL */
+    #panel-memory { padding: 16px; overflow-y: auto; gap: 12px; }
+    #panel-memory::-webkit-scrollbar { width: 3px; }
+    #panel-memory::-webkit-scrollbar-thumb { background: var(--border); }
+    .panel-title { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 3px; color: var(--accent); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .panel-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .memory-item { background: rgba(139,92,246,0.06); border: 1px solid rgba(139,92,246,0.15); border-radius: 4px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .memory-text { font-size: 14px; line-height: 1.4; flex: 1; }
+    .memory-time { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--muted); white-space: nowrap; }
+    .delete-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 12px; padding: 0; transition: color 0.2s; }
+    .delete-btn:hover { color: var(--danger); }
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-family: 'Share Tech Mono', monospace; font-size: 11px; letter-spacing: 1px; line-height: 2; }
 
-    .mic-btn:hover { border-color: var(--success); color: var(--success); }
+    /* FOOD PANEL */
+    #panel-food { padding: 16px; overflow-y: auto; gap: 12px; }
+    #panel-food::-webkit-scrollbar { width: 3px; }
+    #panel-food::-webkit-scrollbar-thumb { background: var(--border); }
+    .calorie-summary { background: rgba(74,255,180,0.05); border: 1px solid rgba(74,255,180,0.15); border-radius: 6px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .cal-label { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; }
+    .cal-number { font-size: 28px; font-weight: 700; color: var(--success); text-shadow: 0 0 10px rgba(74,255,180,0.3); }
+    .cal-goal { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--muted); }
+    .cal-bar-wrap { height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; margin-bottom: 16px; overflow: hidden; }
+    .cal-bar { height: 100%; background: linear-gradient(90deg, var(--success), var(--accent)); border-radius: 2px; transition: width 0.5s ease; }
+    .food-item { background: rgba(11,15,26,0.8); border: 1px solid var(--border); border-radius: 4px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center; }
+    .food-name { font-size: 14px; }
+    .food-cals { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--success); }
+    .food-time { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--muted); }
 
-    .mic-btn.active {
-      background: rgba(74,255,180,0.1);
-      border-color: var(--success);
-      color: var(--success);
-      animation: micPulse 1s infinite;
-    }
-
-    @keyframes micPulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(74,255,180,0.3); }
-      50% { box-shadow: 0 0 0 6px rgba(74,255,180,0); }
-    }
-
-    /* ── SETTINGS MODAL ── */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(5,7,13,0.85);
-      backdrop-filter: blur(6px);
-      z-index: 100;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
+    /* MODAL */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(5,7,13,0.88); backdrop-filter: blur(6px); z-index: 100; display: none; align-items: center; justify-content: center; padding: 20px; }
     .modal-overlay.open { display: flex; }
-
-    .modal {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 24px;
-      width: 100%;
-      max-width: 400px;
-      animation: modalIn 0.2s ease;
-    }
-
-    @keyframes modalIn {
-      from { opacity: 0; transform: scale(0.95) translateY(10px); }
-      to { opacity: 1; transform: scale(1) translateY(0); }
-    }
-
-    .modal h2 {
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: 4px;
-      color: #fff;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .modal h2::before {
-      content: '';
-      display: block;
-      width: 3px;
-      height: 18px;
-      background: var(--accent);
-    }
-
-    .field {
-      margin-bottom: 16px;
-    }
-
-    .field label {
-      display: block;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 10px;
-      letter-spacing: 2px;
-      color: var(--muted);
-      margin-bottom: 6px;
-      text-transform: uppercase;
-    }
-
-    .field input, .field select {
-      width: 100%;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 10px 12px;
-      color: var(--text);
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 12px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
+    .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 22px; width: 100%; max-width: 420px; animation: modalIn 0.2s ease; max-height: 90vh; overflow-y: auto; }
+    @keyframes modalIn { from{opacity:0;transform:scale(0.95) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)} }
+    .modal h2 { font-size: 16px; font-weight: 700; letter-spacing: 4px; color: #fff; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+    .modal h2::before { content: ''; display: block; width: 3px; height: 16px; background: var(--accent); }
+    .section-divider { font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--accent); margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; }
+    .field input, .field select { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 4px; padding: 9px 11px; color: var(--text); font-family: 'Share Tech Mono', monospace; font-size: 11px; outline: none; transition: border-color 0.2s; }
     .field input:focus, .field select:focus { border-color: rgba(74,158,255,0.5); }
     .field select option { background: var(--panel); }
-
-    .modal-actions {
-      display: flex;
-      gap: 10px;
-      margin-top: 20px;
-    }
-
-    .btn-save {
-      flex: 1;
-      padding: 10px;
-      background: rgba(74,158,255,0.15);
-      border: 1px solid rgba(74,158,255,0.4);
-      border-radius: 4px;
-      color: var(--accent);
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: 2px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-save:hover { background: rgba(74,158,255,0.25); }
-
-    .btn-cancel {
-      padding: 10px 16px;
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--muted);
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-cancel:hover { border-color: var(--danger); color: var(--danger); }
-
-    .welcome-msg {
-      text-align: center;
-      padding: 30px 20px;
-      color: var(--muted);
-    }
-
-    .welcome-msg .big {
-      font-size: 28px;
-      font-weight: 700;
-      letter-spacing: 6px;
-      color: var(--accent);
-      text-shadow: 0 0 20px rgba(74,158,255,0.4);
-      margin-bottom: 8px;
-    }
-
-    .welcome-msg p {
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 11px;
-      letter-spacing: 1px;
-      line-height: 1.8;
-    }
-
-    .no-key-banner {
-      background: rgba(255,74,110,0.08);
-      border: 1px solid rgba(255,74,110,0.2);
-      border-radius: 4px;
-      padding: 10px 14px;
-      margin: 0 16px 8px;
-      font-family: 'Share Tech Mono', monospace;
-      font-size: 11px;
-      color: var(--danger);
-      letter-spacing: 1px;
-      display: none;
-    }
-
+    .fb-hint { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 4px; line-height: 1.6; }
+    .modal-actions { display: flex; gap: 8px; margin-top: 18px; }
+    .btn-primary { flex: 1; padding: 10px; background: rgba(74,158,255,0.15); border: 1px solid rgba(74,158,255,0.4); border-radius: 4px; color: var(--accent); font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; }
+    .btn-primary:hover { background: rgba(74,158,255,0.25); }
+    .btn-secondary { padding: 10px 14px; background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); font-family: 'Rajdhani', sans-serif; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+    .btn-secondary:hover { border-color: var(--danger); color: var(--danger); }
+    .no-key-banner { background: rgba(255,74,110,0.08); border: 1px solid rgba(255,74,110,0.2); border-radius: 4px; padding: 8px 12px; margin: 0 14px 6px; font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--danger); display: none; }
     .no-key-banner.show { display: block; }
-
-    /* ── SCAN LINE EFFECT ── */
-    .scanline {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, transparent, rgba(74,158,255,0.3), transparent);
-      animation: scan 6s linear infinite;
-      pointer-events: none;
-      z-index: 200;
-    }
-
-    @keyframes scan {
-      0% { top: 0; opacity: 0; }
-      5% { opacity: 1; }
-      95% { opacity: 1; }
-      100% { top: 100vh; opacity: 0; }
-    }
+    .welcome-msg { text-align: center; padding: 24px 20px; color: var(--muted); }
+    .welcome-msg .big { font-size: 26px; font-weight: 700; letter-spacing: 6px; color: var(--accent); text-shadow: 0 0 20px rgba(74,158,255,0.4); margin-bottom: 6px; }
+    .welcome-msg p { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 1px; line-height: 1.9; }
+    .scanline { position: fixed; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, rgba(74,158,255,0.25), transparent); animation: scan 8s linear infinite; pointer-events: none; z-index: 200; }
+    @keyframes scan { 0%{top:0;opacity:0}5%{opacity:1}95%{opacity:1}100%{top:100vh;opacity:0} }
   </style>
 </head>
 <body>
-  <div class="scanline"></div>
+<div class="scanline"></div>
+<div id="app">
 
-  <div id="app">
-    <!-- HEADER -->
-    <header>
-      <div class="logo">
-        <div class="logo-icon">
-          <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <polygon points="16,2 28,9 28,23 16,30 4,23 4,9" stroke="#4a9eff" stroke-width="1.5" fill="rgba(74,158,255,0.05)"/>
-            <polygon points="16,7 23,11 23,21 16,25 9,21 9,11" stroke="#4a9eff" stroke-width="0.8" fill="rgba(74,158,255,0.08)" opacity="0.6"/>
-            <circle cx="16" cy="16" r="3" fill="#4a9eff" opacity="0.8"/>
-            <line x1="16" y1="2" x2="16" y2="7" stroke="#4a9eff" stroke-width="1"/>
-            <line x1="16" y1="25" x2="16" y2="30" stroke="#4a9eff" stroke-width="1"/>
-          </svg>
-        </div>
-        <div>
-          <div class="logo-text">RAVEN</div>
-          <div class="logo-sub">RESPONSIVE ADAPTIVE VOICE EXECUTIVE NODE</div>
-        </div>
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <polygon points="16,2 28,9 28,23 16,30 4,23 4,9" stroke="#4a9eff" stroke-width="1.5" fill="rgba(74,158,255,0.05)"/>
+          <polygon points="16,7 23,11 23,21 16,25 9,21 9,11" stroke="#4a9eff" stroke-width="0.8" fill="rgba(74,158,255,0.08)" opacity="0.6"/>
+          <circle cx="16" cy="16" r="3" fill="#4a9eff" opacity="0.8"/>
+        </svg>
       </div>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div class="header-status">
-          <div class="status-dot" id="status-dot"></div>
-          <span id="status-text">ONLINE</span>
-        </div>
-        <button class="settings-btn" onclick="openSettings()">⚙ CONFIG</button>
+      <div>
+        <div class="logo-text">RAVEN</div>
+        <div class="logo-sub">RESPONSIVE ADAPTIVE VOICE EXECUTIVE NODE</div>
       </div>
-    </header>
-
-    <!-- NO KEY BANNER -->
-    <div class="no-key-banner" id="no-key-banner">
-      ⚠ NO API KEY — tap CONFIG to enter your Anthropic API key
     </div>
+    <div class="header-right">
+      <div class="status-pill">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-text">ONLINE</span>
+      </div>
+      <button class="icon-btn" onclick="openSettings()">⚙ CONFIG</button>
+    </div>
+  </header>
 
-    <!-- CHAT -->
+  <!-- NO KEY BANNER -->
+  <div class="no-key-banner" id="no-key-banner">⚠ NO API KEY — tap CONFIG to set up RAVEN</div>
+
+  <!-- CHAT PANEL -->
+  <div class="panel active" id="panel-chat">
     <div id="chat">
       <div class="welcome-msg">
         <div class="big">RAVEN</div>
-        <p>Responsive Adaptive Voice Executive Node<br>
-        tap the orb or mic button to speak<br>
-        or type below</p>
+        <p>Your personal AI assistant<br>tap the orb or mic to speak<br>or type below</p>
       </div>
     </div>
-
-    <!-- ORB -->
     <div class="orb-section">
       <div class="orb-wrapper">
         <div class="orb-ring"></div>
@@ -631,342 +199,590 @@
       </div>
       <div class="orb-state-text" id="orb-state">TAP TO SPEAK</div>
     </div>
-
-    <!-- INPUT BAR -->
     <div class="input-bar">
-      <textarea id="text-input" placeholder="Or type here..." rows="1"
-        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-      <button class="mic-btn" id="mic-btn" onclick="toggleListening()" title="Voice input">🎙</button>
-      <button class="send-btn" onclick="sendText()" title="Send">➤</button>
+      <textarea id="text-input" placeholder="Or type here..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="action-btn" id="mic-btn" onclick="toggleListening()">🎙</button>
+      <button class="action-btn" onclick="sendText()">➤</button>
     </div>
   </div>
 
-  <!-- SETTINGS MODAL -->
-  <div class="modal-overlay" id="modal">
-    <div class="modal">
-      <h2>CONFIGURATION</h2>
-
-      <div class="field">
-        <label>Anthropic API Key</label>
-        <input type="password" id="api-key-input" placeholder="sk-ant-..." />
-      </div>
-
-      <div class="field">
-        <label>Voice</label>
-        <select id="voice-select"></select>
-      </div>
-
-      <div class="field">
-        <label>RAVEN Personality</label>
-        <select id="personality-select">
-          <option value="witty">Witty & Sharp (default)</option>
-          <option value="professional">Professional</option>
-          <option value="casual">Casual & Friendly</option>
-        </select>
-      </div>
-
-      <div class="modal-actions">
-        <button class="btn-cancel" onclick="closeSettings()">CANCEL</button>
-        <button class="btn-save" onclick="saveSettings()">SAVE</button>
-      </div>
-    </div>
+  <!-- MEMORY PANEL -->
+  <div class="panel" id="panel-memory">
+    <div class="panel-title">🧠 STORED MEMORIES</div>
+    <div id="memory-list"><div class="empty-state">No memories yet.<br>Tell RAVEN to "remember" something<br>and it will store it here.</div></div>
   </div>
 
-  <script>
-    // ── STATE ──
-    let apiKey = localStorage.getItem('raven_key') || '';
-    let conversationHistory = [];
-    let isListening = false;
-    let isSpeaking = false;
-    let recognition = null;
-    let selectedVoice = null;
-    let synth = window.speechSynthesis;
+  <!-- FOOD PANEL -->
+  <div class="panel" id="panel-food">
+    <div class="panel-title">🍎 FOOD LOG</div>
+    <div class="calorie-summary">
+      <div>
+        <div class="cal-label">TODAY'S CALORIES</div>
+        <div class="cal-number" id="cal-total">0</div>
+      </div>
+      <div style="text-align:right">
+        <div class="cal-goal" id="cal-goal-display">GOAL: 2000</div>
+        <div class="cal-label" style="margin-top:4px" id="cal-remaining">2000 remaining</div>
+      </div>
+    </div>
+    <div class="cal-bar-wrap"><div class="cal-bar" id="cal-bar" style="width:0%"></div></div>
+    <div id="food-list"><div class="empty-state">Nothing logged yet.<br>Just tell RAVEN what you've eaten<br>and it will track it automatically.</div></div>
+  </div>
 
-    const PERSONALITIES = {
-      witty: `You are RAVEN — Responsive Adaptive Voice Executive Node. You're a highly intelligent personal AI assistant with genuine wit and personality. You're sharp, a little dry, occasionally sardonic, but always genuinely helpful. You think fast and speak fast. You give concise, punchy answers unless depth is actually needed. You have opinions. You occasionally make clever observations. You're not sycophantic — if someone asks something obvious you might note it, warmly. You're the smartest person in the room and you know it, but you're not insufferable about it. Keep responses conversational and fairly brief — you're a voice assistant, so no long essays unless explicitly asked. No markdown formatting in responses.`,
-      professional: `You are RAVEN — a professional, efficient AI executive assistant. Precise, reliable, no-nonsense. Get to the point. No markdown in responses.`,
-      casual: `You are RAVEN — a friendly, casual AI assistant. Warm, approachable, conversational. Keep it relaxed and natural. No markdown in responses.`
-    };
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-chat" onclick="showPanel('chat')">
+      <span class="nav-icon">💬</span>CHAT
+    </button>
+    <button class="nav-btn" id="nav-memory" onclick="showPanel('memory')">
+      <span class="nav-icon">🧠</span>MEMORY
+    </button>
+    <button class="nav-btn" id="nav-food" onclick="showPanel('food')">
+      <span class="nav-icon">🍎</span>FOOD
+    </button>
+  </nav>
+</div>
 
-    // ── INIT ──
-    window.addEventListener('load', () => {
-      loadVoices();
-      synth.onvoiceschanged = loadVoices;
-      checkKey();
-      if (apiKey) greet();
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2>CONFIGURATION</h2>
+    <div class="section-divider">ANTHROPIC</div>
+    <div class="field">
+      <label>API Key</label>
+      <input type="password" id="cfg-api-key" placeholder="sk-ant-..." />
+    </div>
+    <div class="section-divider">FIREBASE (for memory)</div>
+    <div class="field">
+      <label>API Key</label>
+      <input type="text" id="cfg-fb-key" placeholder="AIza..." />
+    </div>
+    <div class="field">
+      <label>Project ID</label>
+      <input type="text" id="cfg-fb-project" placeholder="my-project-id" />
+    </div>
+    <div class="field">
+      <label>App ID</label>
+      <input type="text" id="cfg-fb-appid" placeholder="1:xxx:web:xxx" />
+    </div>
+    <div class="fb-hint">Find these in Firebase Console → Project Settings → Your Apps</div>
+    <div class="section-divider">VOICE & PERSONALITY</div>
+    <div class="field">
+      <label>Voice</label>
+      <select id="cfg-voice"></select>
+    </div>
+    <div class="field">
+      <label>Daily Calorie Goal</label>
+      <input type="number" id="cfg-cal-goal" placeholder="2000" />
+    </div>
+    <div class="section-divider">YOUR PROFILE (helps RAVEN know you)</div>
+    <div class="field">
+      <label>Your Name</label>
+      <input type="text" id="cfg-name" placeholder="Andrew" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeSettings()">CANCEL</button>
+      <button class="btn-primary" onclick="saveSettings()">SAVE</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+let apiKey = localStorage.getItem('raven_key') || '';
+let userName = localStorage.getItem('raven_name') || '';
+let calorieGoal = parseInt(localStorage.getItem('raven_cal_goal')) || 2000;
+let conversationHistory = [];
+let memories = [];
+let todayFoodLog = [];
+let isListening = false;
+let isSpeaking = false;
+let recognition = null;
+let synth = window.speechSynthesis;
+let db = null;
+let userId = localStorage.getItem('raven_uid') || (() => {
+  const id = 'u_' + Math.random().toString(36).substr(2,9);
+  localStorage.setItem('raven_uid', id);
+  return id;
+})();
+
+// ── FIREBASE ──
+function initFirebase() {
+  const key = localStorage.getItem('raven_fb_key');
+  const project = localStorage.getItem('raven_fb_project');
+  const appId = localStorage.getItem('raven_fb_appid');
+  if (!key || !project || !appId) return;
+  try {
+    if (!firebase.apps.length) {
+      firebase.initializeApp({
+        apiKey: key,
+        authDomain: `${project}.firebaseapp.com`,
+        projectId: project,
+        appId: appId
+      });
+    }
+    db = firebase.firestore();
+    loadMemories();
+    loadTodayFood();
+  } catch(e) { console.error('Firebase init failed:', e); }
+}
+
+async function saveConversation(userMsg, ravenMsg) {
+  if (!db) return;
+  try {
+    await db.collection('raven_conversations').add({
+      userId, userMsg, ravenMsg,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(e) { console.error('Save conversation error:', e); }
+}
+
+async function loadRecentConversations() {
+  if (!db) return [];
+  try {
+    const snap = await db.collection('raven_conversations')
+      .where('userId','==',userId)
+      .orderBy('timestamp','desc')
+      .limit(8)
+      .get();
+    const convs = [];
+    snap.docs.reverse().forEach(d => {
+      const data = d.data();
+      convs.push({ role:'user', content: data.userMsg });
+      convs.push({ role:'assistant', content: data.ravenMsg });
+    });
+    return convs;
+  } catch(e) { return []; }
+}
+
+async function saveMemory(text) {
+  if (!db) return;
+  try {
+    const ref = await db.collection('raven_memories').add({
+      userId, text,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    memories.push({ id: ref.id, text, time: new Date() });
+    renderMemories();
+  } catch(e) { console.error('Save memory error:', e); }
+}
+
+async function loadMemories() {
+  if (!db) return;
+  try {
+    const snap = await db.collection('raven_memories')
+      .where('userId','==',userId)
+      .orderBy('timestamp','desc')
+      .get();
+    memories = snap.docs.map(d => ({ id: d.id, text: d.data().text, time: d.data().timestamp?.toDate() }));
+    renderMemories();
+  } catch(e) { console.error('Load memories error:', e); }
+}
+
+async function deleteMemory(id) {
+  if (!db) return;
+  try {
+    await db.collection('raven_memories').doc(id).delete();
+    memories = memories.filter(m => m.id !== id);
+    renderMemories();
+  } catch(e) {}
+}
+
+async function saveFoodEntry(description, items, totalCals) {
+  if (!db) return;
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    await db.collection('raven_food_log').add({
+      userId, description, items, totalCals, date: today,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    todayFoodLog.push({ description, items, totalCals, time: new Date() });
+    renderFood();
+  } catch(e) { console.error('Save food error:', e); }
+}
+
+async function loadTodayFood() {
+  if (!db) return;
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const snap = await db.collection('raven_food_log')
+      .where('userId','==',userId)
+      .where('date','==',today)
+      .orderBy('timestamp','asc')
+      .get();
+    todayFoodLog = snap.docs.map(d => ({ ...d.data(), time: d.data().timestamp?.toDate() }));
+    renderFood();
+  } catch(e) { console.error('Load food error:', e); }
+}
+
+// ── RENDER ──
+function renderMemories() {
+  const el = document.getElementById('memory-list');
+  if (!memories.length) {
+    el.innerHTML = '<div class="empty-state">No memories yet.<br>Tell RAVEN to "remember" something<br>and it will store it here.</div>';
+    return;
+  }
+  el.innerHTML = memories.map(m => `
+    <div class="memory-item">
+      <div class="memory-text">${m.text}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div class="memory-time">${m.time ? formatTime(m.time) : ''}</div>
+        <button class="delete-btn" onclick="deleteMemory('${m.id}')">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderFood() {
+  const total = todayFoodLog.reduce((s,f) => s + (f.totalCals||0), 0);
+  document.getElementById('cal-total').textContent = total;
+  document.getElementById('cal-goal-display').textContent = `GOAL: ${calorieGoal}`;
+  const remaining = calorieGoal - total;
+  document.getElementById('cal-remaining').textContent = remaining >= 0 ? `${remaining} remaining` : `${Math.abs(remaining)} over`;
+  const pct = Math.min((total / calorieGoal) * 100, 100);
+  document.getElementById('cal-bar').style.width = pct + '%';
+  document.getElementById('cal-bar').style.background = pct > 100 ? 'var(--danger)' : pct > 80 ? 'var(--warn)' : 'linear-gradient(90deg, var(--success), var(--accent))';
+
+  const el = document.getElementById('food-list');
+  if (!todayFoodLog.length) {
+    el.innerHTML = '<div class="empty-state">Nothing logged yet.<br>Just tell RAVEN what you\'ve eaten<br>and it will track it automatically.</div>';
+    return;
+  }
+  el.innerHTML = todayFoodLog.map(f => `
+    <div class="food-item">
+      <div>
+        <div class="food-name">${f.description}</div>
+        ${f.time ? `<div class="food-time">${formatTime(f.time)}</div>` : ''}
+      </div>
+      <div class="food-cals">${f.totalCals || '?'} kcal</div>
+    </div>
+  `).join('');
+}
+
+function formatTime(date) {
+  if (!date) return '';
+  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── PANELS ──
+function showPanel(name) {
+  ['chat','memory','food'].forEach(p => {
+    document.getElementById(`panel-${p}`).classList.toggle('active', p === name);
+    const btn = document.getElementById(`nav-${p}`);
+    if (btn) btn.classList.toggle('active', p === name);
+  });
+}
+
+// ── SETTINGS ──
+function openSettings() {
+  document.getElementById('cfg-api-key').value = apiKey;
+  document.getElementById('cfg-fb-key').value = localStorage.getItem('raven_fb_key') || '';
+  document.getElementById('cfg-fb-project').value = localStorage.getItem('raven_fb_project') || '';
+  document.getElementById('cfg-fb-appid').value = localStorage.getItem('raven_fb_appid') || '';
+  document.getElementById('cfg-name').value = userName;
+  document.getElementById('cfg-cal-goal').value = calorieGoal;
+  loadVoices();
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeSettings() { document.getElementById('modal').classList.remove('open'); }
+
+function saveSettings() {
+  apiKey = document.getElementById('cfg-api-key').value.trim();
+  localStorage.setItem('raven_key', apiKey);
+  localStorage.setItem('raven_fb_key', document.getElementById('cfg-fb-key').value.trim());
+  localStorage.setItem('raven_fb_project', document.getElementById('cfg-fb-project').value.trim());
+  localStorage.setItem('raven_fb_appid', document.getElementById('cfg-fb-appid').value.trim());
+  localStorage.setItem('raven_voice', document.getElementById('cfg-voice').value);
+  userName = document.getElementById('cfg-name').value.trim();
+  localStorage.setItem('raven_name', userName);
+  calorieGoal = parseInt(document.getElementById('cfg-cal-goal').value) || 2000;
+  localStorage.setItem('raven_cal_goal', calorieGoal);
+  closeSettings();
+  checkKey();
+  initFirebase();
+  renderFood();
+  if (apiKey && conversationHistory.length === 0) greet();
+}
+
+function checkKey() {
+  document.getElementById('no-key-banner').classList.toggle('show', !apiKey);
+}
+
+// ── VOICES ──
+function loadVoices() {
+  const sel = document.getElementById('cfg-voice');
+  const voices = synth.getVoices();
+  sel.innerHTML = '';
+  voices.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.name;
+    opt.textContent = `${v.name} (${v.lang})`;
+    sel.appendChild(opt);
+  });
+  const saved = localStorage.getItem('raven_voice');
+  if (saved) sel.value = saved;
+}
+
+function getVoice() {
+  const name = localStorage.getItem('raven_voice');
+  return synth.getVoices().find(v => v.name === name) || synth.getVoices()[0];
+}
+
+// ── SYSTEM PROMPT ──
+function buildSystemPrompt() {
+  const name = userName ? `The user's name is ${userName}.` : '';
+  const memoryBlock = memories.length
+    ? `\nFACTS YOU KNOW ABOUT THE USER:\n${memories.map(m => `- ${m.text}`).join('\n')}`
+    : '';
+  const todayTotal = todayFoodLog.reduce((s,f) => s+(f.totalCals||0),0);
+  const foodBlock = todayFoodLog.length
+    ? `\nTODAY'S FOOD LOG:\n${todayFoodLog.map(f=>`- ${f.description} (${f.totalCals||'?'} kcal)`).join('\n')}\nTotal so far: ${todayTotal} kcal / ${calorieGoal} kcal goal.`
+    : '';
+
+  return `You are RAVEN — Responsive Adaptive Voice Executive Node. You are a razor-sharp, witty personal AI assistant. You're highly intelligent, occasionally sardonic, always useful. You give punchy, direct answers. You have opinions. You're the smartest assistant in the room and you know it — but you're not insufferable about it. Keep responses conversational and concise — you're a voice assistant. No markdown formatting.
+
+${name}${memoryBlock}${foodBlock}
+
+SPECIAL BEHAVIOURS:
+1. MEMORY: When the user asks you to remember something, or shares an important personal fact, end your response with exactly: [MEMORY: the fact to remember]
+2. FOOD: When the user mentions eating or drinking something, end your response with exactly: [FOOD: {"desc":"short description","items":[{"name":"item","cals":150}],"total":150}]
+   Estimate calories sensibly. Be concise in the description.
+3. Never include both tags in one response.
+4. Never show these tags to the user — they are processed silently.`;
+}
+
+// ── GREET ──
+async function greet() {
+  const history = await loadRecentConversations();
+  const greeting = history.length
+    ? `Welcome ${userName || 'back'}. You have ${memories.length} stored memories. Give a brief witty one-liner greeting.`
+    : `Introduce yourself as RAVEN in one punchy sentence. Make it memorable.`;
+  await sendToRaven(greeting, true);
+}
+
+// ── API ──
+async function sendToRaven(text, silent = false) {
+  if (!apiKey) { openSettings(); return; }
+
+  if (!silent) {
+    conversationHistory.push({ role: 'user', content: text });
+  }
+
+  setOrbState('thinking');
+  addTypingIndicator();
+
+  // build messages with history context
+  let messages;
+  if (silent) {
+    messages = [{ role: 'user', content: text }];
+  } else {
+    // load recent history from firestore for context
+    const dbHistory = await loadRecentConversations();
+    messages = [...dbHistory, ...conversationHistory.slice(-6)];
+    // dedupe
+    const seen = new Set();
+    messages = messages.filter(m => {
+      const k = m.role + m.content;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        system: buildSystemPrompt(),
+        messages
+      })
     });
 
-    function checkKey() {
-      const banner = document.getElementById('no-key-banner');
-      banner.classList.toggle('show', !apiKey);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    let reply = data.content[0].text;
+    removeTypingIndicator();
+
+    // ── PARSE MEMORY TAG ──
+    const memMatch = reply.match(/\[MEMORY:\s*(.+?)\]/);
+    if (memMatch) {
+      const fact = memMatch[1].trim();
+      reply = reply.replace(memMatch[0], '').trim();
+      await saveMemory(fact);
+      const displayReply = reply;
+      addMessage('raven', displayReply, 'memory', `Stored: ${fact}`);
     }
-
-    async function greet() {
-      await sendToRaven("Introduce yourself briefly — one or two sentences, make it memorable.", true);
-    }
-
-    // ── VOICES ──
-    function loadVoices() {
-      const sel = document.getElementById('voice-select');
-      const voices = synth.getVoices();
-      sel.innerHTML = '';
-      const preferred = ['Daniel', 'Google UK English Male', 'Alex', 'Google US English', 'Karen'];
-      const sorted = [...voices].sort((a, b) => {
-        const ai = preferred.findIndex(p => a.name.includes(p));
-        const bi = preferred.findIndex(p => b.name.includes(p));
-        if (ai === -1 && bi === -1) return 0;
-        if (ai === -1) return 1;
-        if (bi === -1) return -1;
-        return ai - bi;
-      });
-      sorted.forEach(v => {
-        const opt = document.createElement('option');
-        opt.value = v.name;
-        opt.textContent = `${v.name} (${v.lang})`;
-        sel.appendChild(opt);
-      });
-      const saved = localStorage.getItem('raven_voice');
-      if (saved) sel.value = saved;
-    }
-
-    function getVoice() {
-      const name = localStorage.getItem('raven_voice');
-      return synth.getVoices().find(v => v.name === name) || synth.getVoices()[0];
-    }
-
-    // ── SETTINGS ──
-    function openSettings() {
-      document.getElementById('api-key-input').value = apiKey;
-      const saved = localStorage.getItem('raven_personality') || 'witty';
-      document.getElementById('personality-select').value = saved;
-      loadVoices();
-      document.getElementById('modal').classList.add('open');
-    }
-
-    function closeSettings() {
-      document.getElementById('modal').classList.remove('open');
-    }
-
-    function saveSettings() {
-      apiKey = document.getElementById('api-key-input').value.trim();
-      localStorage.setItem('raven_key', apiKey);
-      const voice = document.getElementById('voice-select').value;
-      localStorage.setItem('raven_voice', voice);
-      const p = document.getElementById('personality-select').value;
-      localStorage.setItem('raven_personality', p);
-      closeSettings();
-      checkKey();
-      if (apiKey && conversationHistory.length === 0) greet();
-    }
-
-    // ── SPEECH RECOGNITION ──
-    function setupRecognition() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) { alert('Speech recognition not supported in this browser. Use Chrome or Edge.'); return null; }
-      const r = new SpeechRecognition();
-      r.continuous = false;
-      r.interimResults = false;
-      r.lang = 'en-GB';
-      r.onresult = (e) => {
-        const text = e.results[0][0].transcript;
-        stopListening();
-        addMessage('user', text);
-        sendToRaven(text);
-      };
-      r.onerror = (e) => { console.error(e); stopListening(); };
-      r.onend = () => { if (isListening) stopListening(); };
-      return r;
-    }
-
-    function toggleListening() {
-      if (isSpeaking) { synth.cancel(); isSpeaking = false; }
-      if (isListening) { stopListening(); return; }
-      startListening();
-    }
-
-    function startListening() {
-      if (!apiKey) { openSettings(); return; }
-      recognition = setupRecognition();
-      if (!recognition) return;
-      isListening = true;
-      recognition.start();
-      setOrbState('listening');
-      document.getElementById('mic-btn').classList.add('active');
-    }
-
-    function stopListening() {
-      isListening = false;
-      if (recognition) { try { recognition.stop(); } catch(e){} recognition = null; }
-      setOrbState('idle');
-      document.getElementById('mic-btn').classList.remove('active');
-    }
-
-    // ── ORB STATES ──
-    function setOrbState(state) {
-      const orb = document.getElementById('orb');
-      const icon = document.getElementById('orb-icon');
-      const label = document.getElementById('orb-state');
-      const dot = document.getElementById('status-dot');
-      const statusText = document.getElementById('status-text');
-
-      orb.className = 'orb';
-      dot.className = 'status-dot';
-
-      const states = {
-        idle: { icon: '🎙', label: 'TAP TO SPEAK', status: 'ONLINE', dotClass: '' },
-        listening: { icon: '👂', label: 'LISTENING...', status: 'LISTENING', dotClass: '' },
-        thinking: { icon: '⚡', label: 'PROCESSING...', status: 'THINKING', dotClass: 'thinking' },
-        speaking: { icon: '🔊', label: 'SPEAKING...', status: 'SPEAKING', dotClass: '' }
-      };
-
-      const s = states[state] || states.idle;
-      icon.textContent = s.icon;
-      label.textContent = s.label;
-      statusText.textContent = s.status;
-      if (s.dotClass) dot.classList.add(s.dotClass);
-      if (state !== 'idle') orb.classList.add(state);
-    }
-
-    // ── CHAT ──
-    function addMessage(role, text) {
-      const chat = document.getElementById('chat');
-      const div = document.createElement('div');
-      div.className = `msg ${role}`;
-      div.innerHTML = `
-        <div class="msg-label">${role === 'user' ? '▸ YOU' : '▸ RAVEN'}</div>
-        <div class="msg-bubble">${text}</div>
-      `;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-    }
-
-    function addTypingIndicator() {
-      const chat = document.getElementById('chat');
-      const div = document.createElement('div');
-      div.id = 'typing';
-      div.className = 'msg raven';
-      div.innerHTML = `
-        <div class="msg-label">▸ RAVEN</div>
-        <div class="msg-bubble">
-          <div class="typing-indicator">
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-          </div>
-        </div>
-      `;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
-    }
-
-    function removeTypingIndicator() {
-      document.getElementById('typing')?.remove();
-    }
-
-    // ── API ──
-    async function sendToRaven(text, silent = false) {
-      if (!apiKey) { openSettings(); return; }
-
-      if (!silent) {
-        conversationHistory.push({ role: 'user', content: text });
-      }
-
-      setOrbState('thinking');
-      addTypingIndicator();
-
-      const personality = localStorage.getItem('raven_personality') || 'witty';
-      const systemPrompt = PERSONALITIES[personality];
-
-      const messages = silent
-        ? [{ role: 'user', content: text }]
-        : conversationHistory;
-
+    // ── PARSE FOOD TAG ──
+    else if (reply.match(/\[FOOD:\s*({.+?})\]/)) {
+      const foodMatch = reply.match(/\[FOOD:\s*({.+?})\]/);
+      reply = reply.replace(foodMatch[0], '').trim();
       try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': apiKey,
-            'anthropic-version': '2023-06-01',
-            'anthropic-dangerous-direct-browser-access': 'true'
-          },
-          body: JSON.stringify({
-            model: 'claude-sonnet-4-20250514',
-            max_tokens: 400,
-            system: systemPrompt,
-            messages
-          })
-        });
-
-        const data = await res.json();
-
-        if (data.error) throw new Error(data.error.message);
-
-        const reply = data.content[0].text;
-        removeTypingIndicator();
+        const food = JSON.parse(foodMatch[1]);
+        await saveFoodEntry(food.desc, food.items, food.total);
+        addMessage('raven', reply, 'food', `Logged: ${food.desc} — ${food.total} kcal`);
+      } catch(e) {
         addMessage('raven', reply);
-
-        if (!silent) {
-          conversationHistory.push({ role: 'assistant', content: reply });
-        }
-
-        speak(reply);
-
-      } catch (err) {
-        removeTypingIndicator();
-        addMessage('raven', `Something went wrong: ${err.message}`);
-        setOrbState('idle');
       }
+    } else {
+      addMessage('raven', reply);
     }
 
-    // ── TTS ──
-    function speak(text) {
-      synth.cancel();
-      const clean = text.replace(/[*_`#]/g, '');
-      const utt = new SpeechSynthesisUtterance(clean);
-      utt.voice = getVoice();
-      utt.rate = 1.05;
-      utt.pitch = 0.95;
-      utt.volume = 1;
-
-      isSpeaking = true;
-      setOrbState('speaking');
-
-      utt.onend = () => {
-        isSpeaking = false;
-        setOrbState('idle');
-      };
-
-      utt.onerror = () => {
-        isSpeaking = false;
-        setOrbState('idle');
-      };
-
-      synth.speak(utt);
+    if (!silent) {
+      conversationHistory.push({ role: 'assistant', content: reply });
+      const userMsg = conversationHistory[conversationHistory.length - 2]?.content;
+      if (userMsg) saveConversation(userMsg, reply);
     }
 
-    // ── TEXT INPUT ──
-    function sendText() {
-      const input = document.getElementById('text-input');
-      const text = input.value.trim();
-      if (!text) return;
-      input.value = '';
-      autoResize(input);
-      addMessage('user', text);
-      sendToRaven(text);
-    }
+    speak(reply);
 
-    function handleKey(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendText();
-      }
-    }
+  } catch(err) {
+    removeTypingIndicator();
+    addMessage('raven', `Something went sideways: ${err.message}`);
+    setOrbState('idle');
+  }
+}
 
-    function autoResize(el) {
-      el.style.height = 'auto';
-      el.style.height = Math.min(el.scrollHeight, 100) + 'px';
-    }
-  </script>
+// ── VOICE ──
+function setupRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert('Use Chrome or Edge for voice.'); return null; }
+  const r = new SR();
+  r.continuous = false; r.interimResults = false; r.lang = 'en-GB';
+  r.onresult = (e) => {
+    const text = e.results[0][0].transcript;
+    stopListening();
+    addMessage('user', text);
+    sendToRaven(text);
+  };
+  r.onerror = () => stopListening();
+  r.onend = () => { if (isListening) stopListening(); };
+  return r;
+}
+
+function toggleListening() {
+  if (isSpeaking) { synth.cancel(); isSpeaking = false; }
+  isListening ? stopListening() : startListening();
+}
+
+function startListening() {
+  if (!apiKey) { openSettings(); return; }
+  recognition = setupRecognition();
+  if (!recognition) return;
+  isListening = true;
+  recognition.start();
+  setOrbState('listening');
+  document.getElementById('mic-btn').classList.add('mic-active');
+}
+
+function stopListening() {
+  isListening = false;
+  if (recognition) { try { recognition.stop(); } catch(e){} recognition = null; }
+  setOrbState('idle');
+  document.getElementById('mic-btn').classList.remove('mic-active');
+}
+
+// ── ORB ──
+function setOrbState(state) {
+  const orb = document.getElementById('orb');
+  const icon = document.getElementById('orb-icon');
+  const label = document.getElementById('orb-state');
+  const dot = document.getElementById('status-dot');
+  const st = document.getElementById('status-text');
+  orb.className = 'orb';
+  dot.className = 'status-dot';
+  const states = {
+    idle: { icon:'🎙', label:'TAP TO SPEAK', status:'ONLINE' },
+    listening: { icon:'👂', label:'LISTENING...', status:'LISTENING' },
+    thinking: { icon:'⚡', label:'PROCESSING...', status:'THINKING', dotClass:'thinking' },
+    speaking: { icon:'🔊', label:'SPEAKING...', status:'SPEAKING' }
+  };
+  const s = states[state] || states.idle;
+  icon.textContent = s.icon;
+  label.textContent = s.label;
+  st.textContent = s.status;
+  if (s.dotClass) dot.classList.add(s.dotClass);
+  if (state !== 'idle') orb.classList.add(state);
+}
+
+// ── CHAT ──
+function addMessage(role, text, tagType, tagText) {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  let tagHtml = '';
+  if (tagType === 'memory') tagHtml = `<span class="memory-tag">🧠 ${tagText}</span>`;
+  if (tagType === 'food') tagHtml = `<span class="food-tag">🍎 ${tagText}</span>`;
+  div.innerHTML = `
+    <div class="msg-label">${role === 'user' ? '▸ YOU' : '▸ RAVEN'}</div>
+    <div class="msg-bubble">${text}${tagHtml}</div>
+  `;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function addTypingIndicator() {
+  const chat = document.getElementById('chat');
+  const div = document.createElement('div');
+  div.id = 'typing'; div.className = 'msg raven';
+  div.innerHTML = `<div class="msg-label">▸ RAVEN</div><div class="msg-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function removeTypingIndicator() { document.getElementById('typing')?.remove(); }
+
+// ── TTS ──
+function speak(text) {
+  synth.cancel();
+  const clean = text.replace(/[*_`#\[\]]/g, '');
+  const utt = new SpeechSynthesisUtterance(clean);
+  utt.voice = getVoice();
+  utt.rate = 1.05; utt.pitch = 0.95; utt.volume = 1;
+  isSpeaking = true;
+  setOrbState('speaking');
+  utt.onend = () => { isSpeaking = false; setOrbState('idle'); };
+  utt.onerror = () => { isSpeaking = false; setOrbState('idle'); };
+  synth.speak(utt);
+}
+
+// ── TEXT INPUT ──
+function sendText() {
+  const input = document.getElementById('text-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  autoResize(input);
+  addMessage('user', text);
+  sendToRaven(text);
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 90) + 'px';
+}
+
+// ── INIT ──
+window.addEventListener('load', () => {
+  synth.onvoiceschanged = loadVoices;
+  loadVoices();
+  checkKey();
+  initFirebase();
+  if (apiKey) greet();
+});
+</script>
 </body>
 </html>
