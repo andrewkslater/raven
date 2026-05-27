@@ -268,7 +268,12 @@
     <div class="fb-hint">Find these in Firebase Console → Project Settings → Your Apps</div>
     <div class="section-divider">VOICE & PERSONALITY</div>
     <div class="field">
-      <label>Voice</label>
+      <label>Google TTS API Key (same voice on every device)</label>
+      <input type="password" id="cfg-google-tts-key" placeholder="AIza..." />
+      <div class="fb-hint">Leave blank to use device voice instead</div>
+    </div>
+    <div class="field">
+      <label>Fallback Device Voice</label>
       <select id="cfg-voice"></select>
     </div>
     <div class="field">
@@ -479,6 +484,7 @@ function openSettings() {
   document.getElementById('cfg-fb-key').value = localStorage.getItem('raven_fb_key') || '';
   document.getElementById('cfg-fb-project').value = localStorage.getItem('raven_fb_project') || '';
   document.getElementById('cfg-fb-appid').value = localStorage.getItem('raven_fb_appid') || '';
+  document.getElementById('cfg-google-tts-key').value = localStorage.getItem('raven_google_tts_key') || '';
   document.getElementById('cfg-name').value = userName;
   document.getElementById('cfg-cal-goal').value = calorieGoal;
   loadVoices();
@@ -494,6 +500,7 @@ function saveSettings() {
   localStorage.setItem('raven_fb_project', document.getElementById('cfg-fb-project').value.trim());
   localStorage.setItem('raven_fb_appid', document.getElementById('cfg-fb-appid').value.trim());
   localStorage.setItem('raven_voice', document.getElementById('cfg-voice').value);
+  localStorage.setItem('raven_google_tts_key', document.getElementById('cfg-google-tts-key').value.trim());
   userName = document.getElementById('cfg-name').value.trim();
   localStorage.setItem('raven_name', userName);
   calorieGoal = parseInt(document.getElementById('cfg-cal-goal').value) || 2000;
@@ -747,14 +754,39 @@ function addTypingIndicator() {
 function removeTypingIndicator() { document.getElementById('typing')?.remove(); }
 
 // ── TTS ──
-function speak(text) {
+async function speak(text) {
   synth.cancel();
   const clean = text.replace(/[*_`#\[\]]/g, '');
+  const googleKey = localStorage.getItem('raven_google_tts_key');
+  isSpeaking = true;
+  setOrbState('speaking');
+
+  if (googleKey) {
+    try {
+      const res = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${googleKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input: { text: clean },
+          voice: { languageCode: 'en-GB', name: 'en-GB-Wavenet-D' },
+          audioConfig: { audioEncoding: 'MP3', speakingRate: 1.05, pitch: -1.0 }
+        })
+      });
+      const data = await res.json();
+      if (data.audioContent) {
+        const audio = new Audio('data:audio/mp3;base64,' + data.audioContent);
+        audio.onended = () => { isSpeaking = false; setOrbState('idle'); };
+        audio.onerror = () => { isSpeaking = false; setOrbState('idle'); };
+        audio.play();
+        return;
+      }
+    } catch(e) { console.error('Google TTS error:', e); }
+  }
+
+  // Fallback to device voice
   const utt = new SpeechSynthesisUtterance(clean);
   utt.voice = getVoice();
   utt.rate = 1.05; utt.pitch = 0.95; utt.volume = 1;
-  isSpeaking = true;
-  setOrbState('speaking');
   utt.onend = () => { isSpeaking = false; setOrbState('idle'); };
   utt.onerror = () => { isSpeaking = false; setOrbState('idle'); };
   synth.speak(utt);
