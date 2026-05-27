@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>RAVEN</title>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <style>
@@ -146,6 +147,19 @@
     .welcome-msg { text-align: center; padding: 24px 20px; color: var(--muted); }
     .welcome-msg .big { font-size: 26px; font-weight: 700; letter-spacing: 6px; color: var(--accent); text-shadow: 0 0 20px rgba(74,158,255,0.4); margin-bottom: 6px; }
     .welcome-msg p { font-family: 'Share Tech Mono', monospace; font-size: 10px; letter-spacing: 1px; line-height: 1.9; }
+    /* CALENDAR PANEL */
+    #panel-calendar { padding: 16px; overflow-y: auto; gap: 10px; }
+    #panel-calendar::-webkit-scrollbar { width: 3px; }
+    #panel-calendar::-webkit-scrollbar-thumb { background: var(--border); }
+    .cal-event { background: rgba(11,15,26,0.8); border: 1px solid var(--border); border-left: 2px solid var(--accent2); border-radius: 4px; padding: 10px 12px; }
+    .cal-event-title { font-size: 14px; font-weight: 600; color: var(--text); }
+    .cal-event-time { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--accent2); margin-top: 3px; }
+    .cal-event-date { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 2px; }
+    .connect-btn { width: 100%; padding: 12px; background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.4); border-radius: 6px; color: var(--accent2); font-family: 'Rajdhani', sans-serif; font-size: 14px; font-weight: 600; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; margin-bottom: 12px; }
+    .connect-btn:hover { background: rgba(139,92,246,0.25); }
+    .connect-btn.connected { background: rgba(74,255,180,0.1); border-color: rgba(74,255,180,0.3); color: var(--success); }
+    .cal-day-header { font-family: 'Share Tech Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--accent); margin: 12px 0 6px; }
+
     .scanline { position: fixed; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, rgba(74,158,255,0.25), transparent); animation: scan 8s linear infinite; pointer-events: none; z-index: 200; }
     @keyframes scan { 0%{top:0;opacity:0}5%{opacity:1}95%{opacity:1}100%{top:100vh;opacity:0} }
   </style>
@@ -229,6 +243,13 @@
     <div id="food-list"><div class="empty-state">Nothing logged yet.<br>Just tell RAVEN what you've eaten<br>and it will track it automatically.</div></div>
   </div>
 
+  <!-- CALENDAR PANEL -->
+  <div class="panel" id="panel-calendar">
+    <div class="panel-title">📅 CALENDAR</div>
+    <button class="connect-btn" id="cal-connect-btn" onclick="connectCalendar()">🔗 CONNECT GOOGLE CALENDAR</button>
+    <div id="calendar-list"><div class="empty-state">Connect your Google Calendar<br>to see upcoming events here.</div></div>
+  </div>
+
   <!-- BOTTOM NAV -->
   <nav class="bottom-nav">
     <button class="nav-btn active" id="nav-chat" onclick="showPanel('chat')">
@@ -239,6 +260,9 @@
     </button>
     <button class="nav-btn" id="nav-food" onclick="showPanel('food')">
       <span class="nav-icon">🍎</span>FOOD
+    </button>
+    <button class="nav-btn" id="nav-calendar" onclick="showPanel('calendar')">
+      <span class="nav-icon">📅</span>CAL
     </button>
   </nav>
 </div>
@@ -251,6 +275,12 @@
     <div class="field">
       <label>API Key</label>
       <input type="password" id="cfg-api-key" placeholder="sk-ant-..." />
+    </div>
+    <div class="section-divider">GOOGLE CALENDAR</div>
+    <div class="field">
+      <label>Google Client ID</label>
+      <input type="text" id="cfg-google-client-id" placeholder="xxx.apps.googleusercontent.com" />
+      <div class="fb-hint">From Google Cloud Console → APIs & Services → Credentials</div>
     </div>
     <div class="section-divider">FIREBASE (for memory)</div>
     <div class="field">
@@ -519,11 +549,12 @@ function formatTime(date) {
 
 // ── PANELS ──
 function showPanel(name) {
-  ['chat','memory','food'].forEach(p => {
+  ['chat','memory','food','calendar'].forEach(p => {
     document.getElementById(`panel-${p}`).classList.toggle('active', p === name);
     const btn = document.getElementById(`nav-${p}`);
     if (btn) btn.classList.toggle('active', p === name);
   });
+  if (name === 'calendar') loadCalendarEvents();
 }
 
 // ── SETTINGS ──
@@ -533,6 +564,7 @@ function openSettings() {
   document.getElementById('cfg-fb-project').value = localStorage.getItem('raven_fb_project') || '';
   document.getElementById('cfg-fb-appid').value = localStorage.getItem('raven_fb_appid') || '';
   document.getElementById('cfg-google-tts-key').value = localStorage.getItem('raven_google_tts_key') || '';
+  document.getElementById('cfg-google-client-id').value = localStorage.getItem('raven_google_client_id') || '';
   document.getElementById('cfg-user-id').value = localStorage.getItem('raven_uid') || '';
   document.getElementById('cfg-name').value = userName;
   document.getElementById('cfg-cal-goal').value = calorieGoal;
@@ -550,6 +582,8 @@ function saveSettings() {
   localStorage.setItem('raven_fb_appid', document.getElementById('cfg-fb-appid').value.trim());
   localStorage.setItem('raven_voice', document.getElementById('cfg-voice').value);
   localStorage.setItem('raven_google_tts_key', document.getElementById('cfg-google-tts-key').value.trim());
+  const newClientId = document.getElementById('cfg-google-client-id').value.trim();
+  if (newClientId) { localStorage.setItem('raven_google_client_id', newClientId); initGoogleCalendar(); }
   const newUserId = document.getElementById('cfg-user-id').value.trim().toLowerCase().replace(/\s+/g, '_');
   if (newUserId) { userId = newUserId; localStorage.setItem('raven_uid', newUserId); }
   userName = document.getElementById('cfg-name').value.trim();
@@ -606,8 +640,10 @@ SPECIAL BEHAVIOURS:
 1. MEMORY: When the user asks you to remember something, or shares an important personal fact, end your response with exactly: [MEMORY: the fact to remember]
 2. FOOD: When the user mentions eating or drinking something, end your response with exactly: [FOOD: {"desc":"short description","items":[{"name":"item","cals":150}],"total":150}]
    Estimate calories sensibly. Be concise in the description.
-3. Never include both tags in one response.
-4. Never show these tags to the user — they are processed silently.`;
+3. CALENDAR: When the user asks to create, add or schedule a calendar event, end your response with exactly: [CAL_CREATE: {"title":"Event title","datetime":"2026-05-28T14:00:00","duration":60,"description":""}]
+   Use 24hr format. Duration in minutes. Date must be in ISO format.
+4. Only use ONE tag per response maximum.
+5. Never show these tags to the user — they are processed silently.`;
 }
 
 // ── GREET ──
@@ -714,26 +750,30 @@ async function sendToRaven(text, silent = false) {
     removeTypingIndicator();
     trackUsage(totalInput, totalOutput, totalSearches);
 
-    // ── PARSE MEMORY TAG ──
+    // ── PARSE SPECIAL TAGS ──
     const memMatch = reply.match(/\[MEMORY:\s*(.+?)\]/);
+    const foodMatch = reply.match(/\[FOOD:\s*({.+?})\]/);
+    const calMatch = reply.match(/\[CAL_CREATE:\s*({.+?})\]/s);
+
     if (memMatch) {
       const fact = memMatch[1].trim();
       reply = reply.replace(memMatch[0], '').trim();
       await saveMemory(fact);
-      const displayReply = reply;
-      addMessage('raven', displayReply, 'memory', `Stored: ${fact}`);
-    }
-    // ── PARSE FOOD TAG ──
-    else if (reply.match(/\[FOOD:\s*({.+?})\]/)) {
-      const foodMatch = reply.match(/\[FOOD:\s*({.+?})\]/);
+      addMessage('raven', reply, 'memory', `Stored: ${fact}`);
+    } else if (foodMatch) {
       reply = reply.replace(foodMatch[0], '').trim();
       try {
         const food = JSON.parse(foodMatch[1]);
         await saveFoodEntry(food.desc, food.items, food.total);
         addMessage('raven', reply, 'food', `Logged: ${food.desc} — ${food.total} kcal`);
-      } catch(e) {
-        addMessage('raven', reply);
-      }
+      } catch(e) { addMessage('raven', reply); }
+    } else if (calMatch) {
+      reply = reply.replace(calMatch[0], '').trim();
+      try {
+        const ev = JSON.parse(calMatch[1]);
+        const created = await createCalendarEvent(ev.title, ev.datetime, ev.duration || 60, ev.description || '');
+        addMessage('raven', reply, 'calendar', created ? `📅 Added: ${ev.title}` : `📅 Connect calendar first`);
+      } catch(e) { addMessage('raven', reply); }
     } else {
       addMessage('raven', reply);
     }
@@ -901,12 +941,143 @@ function autoResize(el) {
   el.style.height = Math.min(el.scrollHeight, 90) + 'px';
 }
 
+// ── GOOGLE CALENDAR ──
+let tokenClient = null;
+let calendarEvents = [];
+
+function initGoogleCalendar() {
+  const clientId = localStorage.getItem('raven_google_client_id');
+  if (!clientId) return;
+  if (typeof google === 'undefined') {
+    setTimeout(initGoogleCalendar, 500);
+    return;
+  }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: 'https://www.googleapis.com/auth/calendar',
+    callback: async (resp) => {
+      if (resp.access_token) {
+        localStorage.setItem('raven_google_token', resp.access_token);
+        localStorage.setItem('raven_google_token_exp', Date.now() + 3500000);
+        document.getElementById('cal-connect-btn').textContent = '✅ GOOGLE CALENDAR CONNECTED';
+        document.getElementById('cal-connect-btn').classList.add('connected');
+        await loadCalendarEvents();
+      }
+    }
+  });
+  // Try silent token refresh
+  const token = getGoogleToken();
+  if (token) {
+    document.getElementById('cal-connect-btn').textContent = '✅ GOOGLE CALENDAR CONNECTED';
+    document.getElementById('cal-connect-btn').classList.add('connected');
+    loadCalendarEvents();
+  }
+}
+
+function connectCalendar() {
+  if (!localStorage.getItem('raven_google_client_id')) {
+    openSettings();
+    return;
+  }
+  if (!tokenClient) { initGoogleCalendar(); setTimeout(connectCalendar, 600); return; }
+  tokenClient.requestAccessToken({ prompt: '' });
+}
+
+function getGoogleToken() {
+  const token = localStorage.getItem('raven_google_token');
+  const exp = parseInt(localStorage.getItem('raven_google_token_exp') || '0');
+  if (token && Date.now() < exp) return token;
+  return null;
+}
+
+async function loadCalendarEvents() {
+  const token = getGoogleToken();
+  if (!token) return;
+  try {
+    const now = new Date().toISOString();
+    const end = new Date(Date.now() + 7 * 86400000).toISOString();
+    const res = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${now}&timeMax=${end}&orderBy=startTime&singleEvents=true&maxResults=20`,
+      { headers: { 'Authorization': `Bearer ${token}` } }
+    );
+    const data = await res.json();
+    calendarEvents = data.items || [];
+    renderCalendar();
+  } catch(e) { console.error('Calendar load error:', e); }
+}
+
+async function createCalendarEvent(title, datetimeStr, durationMins = 60, description = '') {
+  const token = getGoogleToken();
+  if (!token) return false;
+  try {
+    const start = new Date(datetimeStr);
+    const end = new Date(start.getTime() + durationMins * 60000);
+    const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        summary: title,
+        description,
+        start: { dateTime: start.toISOString(), timeZone: 'Europe/London' },
+        end: { dateTime: end.toISOString(), timeZone: 'Europe/London' }
+      })
+    });
+    if (res.ok) { await loadCalendarEvents(); return true; }
+    return false;
+  } catch(e) { return false; }
+}
+
+function renderCalendar() {
+  const el = document.getElementById('calendar-list');
+  if (!calendarEvents.length) {
+    el.innerHTML = '<div class="empty-state">No events in the next 7 days.</div>';
+    return;
+  }
+  const grouped = {};
+  calendarEvents.forEach(ev => {
+    const date = ev.start.dateTime ? new Date(ev.start.dateTime) : new Date(ev.start.date);
+    const key = date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(ev);
+  });
+  el.innerHTML = Object.entries(grouped).map(([day, events]) => `
+    <div class="cal-day-header">${day.toUpperCase()}</div>
+    ${events.map(ev => {
+      const start = ev.start.dateTime ? new Date(ev.start.dateTime) : null;
+      const end = ev.end.dateTime ? new Date(ev.end.dateTime) : null;
+      const timeStr = start ? start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : 'All day';
+      const endStr = end ? end.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+      return `<div class="cal-event">
+        <div class="cal-event-title">${ev.summary || 'Untitled'}</div>
+        <div class="cal-event-time">${timeStr}${endStr ? ' — ' + endStr : ''}</div>
+        ${ev.location ? `<div class="cal-event-date">📍 ${ev.location}</div>` : ''}
+      </div>`;
+    }).join('')}
+  `).join('');
+}
+
+async function getCalendarContext() {
+  if (!calendarEvents.length) return '';
+  const now = new Date();
+  const lines = calendarEvents.slice(0, 10).map(ev => {
+    const start = ev.start.dateTime ? new Date(ev.start.dateTime) : new Date(ev.start.date);
+    const dateStr = start.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    const timeStr = ev.start.dateTime ? start.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : 'All day';
+    return `- ${dateStr} ${timeStr}: ${ev.summary || 'Untitled'}`;
+  });
+  return `
+UPCOMING CALENDAR EVENTS (next 7 days):
+${lines.join('
+')}`;
+}
+
 // ── INIT ──
 window.addEventListener('load', () => {
   synth.onvoiceschanged = loadVoices;
   loadVoices();
   checkKey();
   initFirebase();
+  initGoogleCalendar();
   if (apiKey) greet();
 });
 </script>
