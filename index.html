@@ -348,15 +348,16 @@ async function loadRecentConversations() {
   try {
     const snap = await db.collection('raven_conversations')
       .where('userId','==',userId)
-      .orderBy('timestamp','desc')
-      .limit(8)
       .get();
     const convs = [];
-    snap.docs.reverse().forEach(d => {
-      const data = d.data();
-      convs.push({ role:'user', content: data.userMsg });
-      convs.push({ role:'assistant', content: data.ravenMsg });
-    });
+    snap.docs
+      .sort((a,b) => (a.data().timestamp?.seconds||0) - (b.data().timestamp?.seconds||0))
+      .slice(-8)
+      .forEach(d => {
+        const data = d.data();
+        convs.push({ role:'user', content: data.userMsg });
+        convs.push({ role:'assistant', content: data.ravenMsg });
+      });
     return convs;
   } catch(e) { return []; }
 }
@@ -378,9 +379,10 @@ async function loadMemories() {
   try {
     const snap = await db.collection('raven_memories')
       .where('userId','==',userId)
-      .orderBy('timestamp','desc')
       .get();
-    memories = snap.docs.map(d => ({ id: d.id, text: d.data().text, time: d.data().timestamp?.toDate() }));
+    memories = snap.docs
+      .map(d => ({ id: d.id, text: d.data().text, time: d.data().timestamp?.toDate() }))
+      .sort((a,b) => (b.time||0) - (a.time||0));
     renderMemories();
   } catch(e) { console.error('Load memories error:', e); }
 }
@@ -414,9 +416,10 @@ async function loadTodayFood() {
     const snap = await db.collection('raven_food_log')
       .where('userId','==',userId)
       .where('date','==',today)
-      .orderBy('timestamp','asc')
       .get();
-    todayFoodLog = snap.docs.map(d => ({ ...d.data(), time: d.data().timestamp?.toDate() }));
+    todayFoodLog = snap.docs
+      .map(d => ({ ...d.data(), time: d.data().timestamp?.toDate() }))
+      .sort((a,b) => (a.time||0) - (b.time||0));
     renderFood();
   } catch(e) { console.error('Load food error:', e); }
 }
