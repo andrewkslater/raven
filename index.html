@@ -555,9 +555,14 @@ SPECIAL BEHAVIOURS:
 // ── GREET ──
 async function greet() {
   const history = await loadRecentConversations();
-  const greeting = history.length
-    ? `Welcome ${userName || 'back'}. You have ${memories.length} stored memories. Give a brief witty one-liner greeting.`
-    : `Introduce yourself as RAVEN in one punchy sentence. Make it memorable.`;
+  const hasVisited = localStorage.getItem('raven_visited');
+  let greeting;
+  if (!hasVisited) {
+    localStorage.setItem('raven_visited', 'true');
+    greeting = `Introduce yourself as RAVEN in one punchy sentence. Make it memorable. Don't introduce yourself again in future greetings.`;
+  } else {
+    greeting = `Give ${userName || 'the user'} a very brief witty welcome back — one sentence, no introduction, no name-dropping your own name. Just a sharp one-liner to acknowledge they're back.`;
+  }
   await sendToRaven(greeting, true);
 }
 
