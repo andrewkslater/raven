@@ -678,12 +678,17 @@ async function sendToRaven(text, silent = false) {
     const data = await res.json();
     if (data.error) throw new Error(data.error.message);
 
-    const textBlock = data.content.find(b => b.type === 'text');
-    let reply = textBlock ? textBlock.text : 'Sorry, I could not generate a response.';
+    // Collect all text blocks (web search may produce multiple)
+    let reply = data.content
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join(' ')
+      .trim();
+    if (!reply) reply = 'I searched but could not find a clear answer. Try rephrasing your question.';
     removeTypingIndicator();
 
     // Track usage costs
-    const searches = data.content.filter(b => b.type === 'tool_use').length;
+    const searches = data.content.filter(b => b.type === 'tool_use' || b.type === 'web_search_result').length;
     if (data.usage) trackUsage(data.usage.input_tokens||0, data.usage.output_tokens||0, searches);
 
     // ── PARSE MEMORY TAG ──
