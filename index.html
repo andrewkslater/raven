@@ -396,7 +396,7 @@ async function loadRecentConversations() {
     const convs = [];
     snap.docs
       .sort((a,b) => (a.data().timestamp?.seconds||0) - (b.data().timestamp?.seconds||0))
-      .slice(-8)
+      .slice(-4)
       .forEach(d => {
         const data = d.data();
         convs.push({ role:'user', content: data.userMsg });
@@ -595,7 +595,7 @@ async function buildSystemPrompt() {
     : '';
   const todayTotal = todayFoodLog.reduce((s,f) => s+(f.totalCals||0),0);
   const foodBlock = todayFoodLog.length
-    ? `\nTODAY'S FOOD LOG:\n${todayFoodLog.map(f=>`- ${f.description} (${f.totalCals||'?'} kcal)`).join('\n')}\nTotal so far: ${todayTotal} kcal / ${calorieGoal} kcal goal.`
+    ? `\nTODAY'S FOOD LOG:\n${todayFoodLog.slice(0,10).map(f=>`- ${f.description} (${f.totalCals||'?'} kcal)`).join('\n')}\nTotal so far: ${todayTotal} kcal / ${calorieGoal} kcal goal.`
     : '';
 
   return `You are RAVEN — Responsive Adaptive Voice Executive Node. You are a razor-sharp, witty personal AI assistant. You're highly intelligent, occasionally sardonic, always useful. You give punchy, direct answers. You have opinions. You're the smartest assistant in the room and you know it — but you're not insufferable about it. Keep responses conversational and concise — you're a voice assistant. No markdown formatting.
@@ -668,7 +668,7 @@ async function sendToRaven(text, silent = false) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
+        max_tokens: 600,
         system: await buildSystemPrompt(),
         messages,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }]
