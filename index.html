@@ -282,6 +282,11 @@
     </div>
     <div class="section-divider">YOUR PROFILE (helps RAVEN know you)</div>
     <div class="field">
+      <label>User ID (must be same on all your devices)</label>
+      <input type="text" id="cfg-user-id" placeholder="e.g. andrew123" />
+      <div class="fb-hint">Set this to the same value on every device to sync memories</div>
+    </div>
+    <div class="field">
       <label>Your Name</label>
       <input type="text" id="cfg-name" placeholder="Andrew" />
     </div>
@@ -305,11 +310,7 @@ let isSpeaking = false;
 let recognition = null;
 let synth = window.speechSynthesis;
 let db = null;
-let userId = localStorage.getItem('raven_uid') || (() => {
-  const id = 'u_' + Math.random().toString(36).substr(2,9);
-  localStorage.setItem('raven_uid', id);
-  return id;
-})();
+let userId = localStorage.getItem('raven_uid') || 'default_user';
 
 // ── FIREBASE ──
 function initFirebase() {
@@ -485,6 +486,7 @@ function openSettings() {
   document.getElementById('cfg-fb-project').value = localStorage.getItem('raven_fb_project') || '';
   document.getElementById('cfg-fb-appid').value = localStorage.getItem('raven_fb_appid') || '';
   document.getElementById('cfg-google-tts-key').value = localStorage.getItem('raven_google_tts_key') || '';
+  document.getElementById('cfg-user-id').value = localStorage.getItem('raven_uid') || '';
   document.getElementById('cfg-name').value = userName;
   document.getElementById('cfg-cal-goal').value = calorieGoal;
   loadVoices();
@@ -501,6 +503,8 @@ function saveSettings() {
   localStorage.setItem('raven_fb_appid', document.getElementById('cfg-fb-appid').value.trim());
   localStorage.setItem('raven_voice', document.getElementById('cfg-voice').value);
   localStorage.setItem('raven_google_tts_key', document.getElementById('cfg-google-tts-key').value.trim());
+  const newUserId = document.getElementById('cfg-user-id').value.trim().toLowerCase().replace(/\s+/g, '_');
+  if (newUserId) { userId = newUserId; localStorage.setItem('raven_uid', newUserId); }
   userName = document.getElementById('cfg-name').value.trim();
   localStorage.setItem('raven_name', userName);
   calorieGoal = parseInt(document.getElementById('cfg-cal-goal').value) || 2000;
